@@ -58,6 +58,22 @@ class _QuotesScreenState extends State<QuotesScreen> {
     return result ?? false;
   }
 
+  Future<void> _refreshQuotes() async {
+    try {
+      // Fetch new quotes when the user pulls down to refresh
+      var newQuotes = await apiService.fetchQuotes();
+      setState(() {
+        quotes = Future.value(newQuotes);
+      });
+    } catch (error) {
+      // Handle errors during the refresh
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error refreshing quotes: $error'),
+        ),
+      );
+    }
+  }
 
 
   @override
@@ -92,50 +108,53 @@ class _QuotesScreenState extends State<QuotesScreen> {
         backgroundColor: Colors.indigo[500],
       ),
       backgroundColor: Colors.indigo[100],
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: quotes,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text("Error: ${snapshot.error}"),
-            );
-          } else {
-            return ListView.builder(
-              itemCount: snapshot.data!.length,
-              itemBuilder: (context, index) {
-                final quote = snapshot.data![index];
-                return Card(
-                  margin: const EdgeInsets.all(8.0),
-                  child: ListTile(
-                    title: Text(
-                      quote['content'] ?? '',
-                        style: GoogleFonts.dancingScript(
-                          textStyle: const TextStyle(
-                            fontSize: 20,
-                            color: Colors.black,
+      body: RefreshIndicator(
+        onRefresh: _refreshQuotes,
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: quotes,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text("Error: ${snapshot.error}"),
+              );
+            } else {
+              return ListView.builder(
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  final quote = snapshot.data![index];
+                  return Card(
+                    margin: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      title: Text(
+                        quote['content'] ?? '',
+                          style: GoogleFonts.dancingScript(
+                            textStyle: const TextStyle(
+                              fontSize: 20,
+                              color: Colors.black,
+                            ),
                           ),
-                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const SizedBox(height: 4), // Add some spacing
+                          Text(
+                            '- ${quote['author'] ?? ''}',
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      ),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const SizedBox(height: 4), // Add some spacing
-                        Text(
-                          '- ${quote['author'] ?? ''}',
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          }
-        },
+                  );
+                },
+              );
+            }
+          },
+        ),
       ),
     );
   }
